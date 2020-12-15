@@ -7,17 +7,21 @@ const data = fs
   .filter((line) => line);
 const testData = ['939', '7,13,x,x,59,x,31,19'];
 
+function earliestBus(time, buses) {
+  const nextDepartures = buses.map((bus) => bus * Math.ceil(time / bus));
+  const earliestIndex = nextDepartures.reduce(
+    (earliest, departure, index) => (nextDepartures[earliest] > departure ? index : earliest),
+    0
+  );
+  return [buses[earliestIndex], nextDepartures[earliestIndex]];
+}
+
 const time = parseInt(data[0]);
 const buses = data[1]
   .split(',')
-  .filter((bus) => bus !== 'x')
   .map((bus) => parseInt(bus, 10));
 
-const nextDepartures = buses.map((bus) => bus * Math.ceil(time / bus));
-const earliestIndex = nextDepartures.reduce((earliest, departure, index) => (nextDepartures[earliest] > departure ? index : earliest), 0);
-
-console.log(time);
-console.log(buses);
-console.log(nextDepartures);
-console.log(earliestIndex);
-console.log(buses[earliestIndex] * (nextDepartures[earliestIndex] - time));
+// part 1
+let bus, departure;
+[bus, departure] = earliestBus(time, buses.filter(bus => !isNaN(bus)));
+console.log(`Bus ${bus} departs at ${departure} => ${bus * (departure - time)}`);
