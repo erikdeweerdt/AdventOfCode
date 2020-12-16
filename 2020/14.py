@@ -4,7 +4,10 @@ This one's written in Python because JS bitwise operators work on 32-bit signed 
 See https://www.w3schools.com/js/js_bitwise.asp
 """
 
-TESTDATA = ["mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X", "mem[8] = 11", "mem[7] = 101", "mem[8] = 0"]
+TESTDATA = ["mask = XXXXXXXXXXXXXXXXXXXXXXXXXXXXX1XXXX0X",
+            "mem[8] = 11", "mem[7] = 101", "mem[8] = 0"]
+TESTDATA2 = ["mask = 000000000000000000000000000000X1001X", "mem[42] = 100",
+             "mask = 00000000000000000000000000000000X0XX", "mem[26] = 1"]
 
 
 class Mask:
@@ -27,7 +30,17 @@ class Mask:
         return (value & self.and_mask) | self.or_mask
 
 
-def main():
+def part1():
+    mask = Mask()
+    mem = {}
+    for instruction in read_instructions():
+        if instruction[0] == "mask":
+            mask.update(instruction[2])
+        else:
+            mem[instruction[1]] = mask.apply(int(instruction[2]))
+    print(sum(mem.values()))
+
+def read_instructions():
     with open("data/14.txt") as f:
         data = f.readlines()
     instructions = []
@@ -36,16 +49,7 @@ def main():
         if m:
             instructions.append((m.group(1), m.group(2), m.group(3)))
     # print(instructions)
-    mask = Mask()
-    mem = {}
-    for instruction in instructions:
-        if instruction[0] == "mask":
-            mask.update(instruction[2])
-        else:
-            mem[instruction[1]] = mask.apply(int(instruction[2]))
-    print(sum(mem.values()))
-
-
+    return instructions
 
 if __name__ == "__main__":
-    main()
+    part1()
