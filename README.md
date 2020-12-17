@@ -2,5 +2,5 @@
 [https://adventofcode.com/](https://adventofcode.com/)
 
 ## 2020
-Most scripts are written in Javascript to brush up my knowledge of the language while helping someone else learn it.
-Some use other languages better suited for the particular problem.
+Mix of languages used based on personal preference on that day or because a specific language is better suited for the problem at hand.
+The first few puzzles were done in JavaScript to brush up my knowledge of the language and help someone else learn it.
