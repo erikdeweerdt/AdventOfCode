@@ -55,6 +55,7 @@ class PocketDimension:
             self.lookup[cube.x][cube.y][cube.z][cube.w] = cube
 
     def _ensure_neighbors(self) -> None:
+        new_cubes = []
         for cube in self.cubes:
             if cube.active:
                 for x, y, z, w in PocketDimension._neighbor_range(cube):
@@ -62,8 +63,10 @@ class PocketDimension:
                         _ = self.lookup[x][y][z][w]
                     except KeyError:
                         new_cube = Cube(x, y, z, w)
-                        self.cubes.append(new_cube)
+                        new_cubes.append(new_cube)
+                        # insert the new cube immediately to avoid doing it more than once
                         self._insert_cubes([new_cube])
+        self.cubes += new_cubes
 
     @staticmethod
     def _neighbor_range(cube) -> Iterable[Tuple[int, int, int, int]]:
