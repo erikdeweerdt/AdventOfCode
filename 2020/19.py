@@ -4,6 +4,7 @@ from typing import List
 # https://pypi.org/project/regex/
 import regex
 
+#region TESTDATA
 TESTDATA = """
 0: 4 1 5
 1: 2 3 | 3 2
@@ -67,11 +68,12 @@ aaaabbaabbaaaaaaabbbabbbaaabbaabaaa
 babaaabbbaaabaababbaabababaaab
 aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba
 """.splitlines()
+#endregion
 
 
-def compile_pattern(rules: List[str], index=0) -> str:
+def compile_pattern(rules: List[List[str]], index=0) -> str:
     pattern = ""
-    rule = rules[index] if isinstance(rules[index], list) else rules[index].split(" ")
+    rule = rules[index]
     for token in rule:
         if token.startswith("\""):
             pattern += token[1]
@@ -82,7 +84,7 @@ def compile_pattern(rules: List[str], index=0) -> str:
     return "(?:" + pattern + ")" if "|" in rule else pattern
 
 
-def parse_rules(data: List[str]) -> List[str]:
+def parse_rules(data: List[str]) -> List[List[str]]:
     # rules in the input are not ordered
     # some rules numbers may not be defined
     rules = {}
@@ -93,7 +95,7 @@ def parse_rules(data: List[str]) -> List[str]:
             index = int(match.group(1))
             rules[index] = match.group(2)
             max_index = index if index > max_index else max_index
-    return [rules.pop(index, None) for index in range(max_index + 1)]
+    return [rules.pop(index, None).split(" ") for index in range(max_index + 1)]
 
 
 def parse_messages(data: List[str]) -> List[str]:
@@ -114,12 +116,11 @@ def part1(data):
 def part2(data):
     rules = parse_rules(data)
     messages = parse_messages(data)
-    rules[8] = "42 +"
-    # in rule 11, 42 and 31 must be balanced
-    # re doesn't support recursive regexes and we have to "cheat" if using that
-    # rules[11] = " | ".join(("42 " * i + "31 " * i).strip() for i in range(1,10))
-    # the newer regex module does support recursion
-    rules[11] = "(?<x>,42,(?&x)?,31,)".split(",")
+    rules[8] = ["42", "+"]
+    # in rule 11, 42 and 31 must be balanced which requires a recursive regex
+    # re doesn't support that, but the newer regex does
+    # if using re, we'd have to "cheat" and manually generate possible combinations
+    rules[11] = ["(?<x>", "42", "(?&x)?", "31", ")"]
     pattern = compile_pattern(rules)
     # print(pattern)
     expr = regex.compile(pattern)
