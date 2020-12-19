@@ -1,5 +1,8 @@
-import re
+# import re
 from typing import List
+
+# https://pypi.org/project/regex/
+import regex
 
 TESTDATA = """
 0: 4 1 5
@@ -68,15 +71,15 @@ aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba
 
 def compile_pattern(rules: List[str], index=0) -> str:
     pattern = ""
-    rule = rules[index].split(" ")
+    rule = rules[index] if isinstance(rules[index], list) else rules[index].split(" ")
     for token in rule:
-        if token == "|":
-            pattern += "|"
-        elif token.startswith("\""):
+        if token.startswith("\""):
             pattern += token[1]
-        else:
+        elif token.isdigit():
             pattern += compile_pattern(rules, int(token))
-    return "(" + pattern + ")" if "|" in rule else pattern
+        else:
+            pattern += token
+    return "(?:" + pattern + ")" if "|" in rule else pattern
 
 
 def parse_rules(data: List[str]) -> List[str]:
@@ -85,7 +88,7 @@ def parse_rules(data: List[str]) -> List[str]:
     rules = {}
     max_index = 0
     for line in data:
-        match = re.match(r"^(\d+): (.*)", line)
+        match = regex.match(r"^(\d+): (.*)", line)
         if match:
             index = int(match.group(1))
             rules[index] = match.group(2)
@@ -104,12 +107,23 @@ def part1(data):
     # print(rules)
     # print(messages)
     print(pattern)
-    regex = re.compile(pattern)
-    print(sum(1 if regex.fullmatch(message) else 0 for message in messages))
+    expr = regex.compile(pattern)
+    print(sum(1 if expr.fullmatch(message) else 0 for message in messages))
 
 
 def part2(data):
-    part1(data)
+    rules = parse_rules(data)
+    messages = parse_messages(data)
+    rules[8] = "42 +"
+    # in rule 11, 42 and 31 must be balanced
+    # re doesn't support recursive regexes and we have to "cheat" if using that
+    # rules[11] = " | ".join(("42 " * i + "31 " * i).strip() for i in range(1,10))
+    # the newer regex module does support recursion
+    rules[11] = "(?<x>,42,(?&x)?,31,)".split(",")
+    pattern = compile_pattern(rules)
+    # print(pattern)
+    expr = regex.compile(pattern)
+    print(sum(1 if expr.fullmatch(message) else 0 for message in messages))
 
 
 if __name__ == "__main__":
@@ -117,4 +131,4 @@ if __name__ == "__main__":
         data = f.read()
     data = data.splitlines()
     # part1(data)
-    part2(TESTDATA2)
+    part2(data)
