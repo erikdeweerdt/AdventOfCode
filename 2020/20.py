@@ -113,6 +113,12 @@ Tile 3079:
 ..#.###...
 """.splitlines()
 # endregion
+# sea monster
+PATTERN = """
+                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   
+""".splitlines()
 
 
 class Border:
@@ -175,6 +181,25 @@ class Tile:
         # will be set to variation index if used
         self.variation = None
 
+    def get(self):
+        image = [[pixel for pixel in row[1:-1]] for row in self.pixels[1:-1]]
+        var = self.variation
+        if var >= 4:
+            image = flip(image)
+            var -= 4
+        for _ in range(var):
+            image = rotate(image)
+        return image
+
+
+def rotate(image: List[List[bool]]) -> List[List[bool]]:
+    size = len(image)
+    return [[image[size - 1 - x][y] for x in range(size)] for y in range(size)]
+
+
+def flip(image: List[List[bool]]) -> List[List[bool]]:
+    return [row for row in reversed(image)]
+
 
 def parse_tiles(data: List[str]) -> Iterable[Tile]:
     tile_id = None
@@ -214,10 +239,11 @@ def find_next(grid: List[int], grid_size: int, tiles: List[Tile], start: int = 0
     return None
 
 
-def part1(data: List[str]):
+def find_grid(data):
     tiles = list(parse_tiles(data))
     grid = []
     size = int(math.sqrt(len(tiles)))  # 12
+    # non-recursive solver
     while len(grid) < len(tiles):
         # print(grid)
         # for new tiles, use the first match in the list
@@ -234,16 +260,65 @@ def part1(data: List[str]):
             else:
                 tile = find_next(grid, size, tiles, index + 1)
         grid.append(tile)
-    print("\n".join(" ".join(str(tiles[grid[row*size+col]].number)
-                             for col in range(size)) for row in range(size)))
+    return [[tiles[grid[row * size + col]] for col in range(size)] for row in range(size)]
+
+
+def match_pattern(image, pattern, row, col):
+    if row + len(pattern) > len(image) or col + len(pattern[0]) > len(image[0]):
+        return False
+    for y in range(len(pattern)):
+        for x in range(len(pattern[0])):
+            if pattern[y][x] and not image[row+y][col+x]:
+                return False
+    return True
+
+
+def count_matches(image, pattern):
+    count = 0
+    for row in range(len(image)):
+        for col in range(len(image[0])):
+            if match_pattern(image, pattern, row, col):
+                count += 1
+    return count
+
+
+def part1(data: List[str]):
+    grid = find_grid(data)
+    print("\n".join(" ".join(str(tile.number)
+                             for tile in row) for row in grid))
     print()
-    print(tiles[grid[0]].number * tiles[grid[size - 1]].number *
-          tiles[grid[size * (size - 1)]].number * tiles[grid[size*size-1]].number)
+    print(grid[0][0].number * grid[0][-1].number *
+          grid[-1][0].number * grid[-1][-1].number)
+
+
+def part2(data: List[str]):
+    grid = find_grid(data)
+    # print("\n".join(" ".join(str(tile.number)
+    #                          for tile in row) for row in grid))
+    # print()
+    tiled_image = [[tile.get() for tile in row] for row in grid]
+    image = []
+    for row in tiled_image:
+        for tile_row in range(len(row[0])):
+            image.append([pixel for tile in row for pixel in tile[tile_row]])
+    # print("\n".join("".join("#" if pixel else "." for pixel in row)
+    #                 for row in image))
+    pattern = [[token == "#" for token in line] for line in PATTERN if line]
+    for i in range(1, 8):
+        matches = count_matches(image, pattern)
+        if matches:
+            break
+        image = rotate(image)
+        if i == 4:
+            image = flip(image)
+    monster_size = sum(1 if pixel else 0 for row in pattern for pixel in row)
+    roughness = sum(1 if pixel else 0 for row in image for pixel in row)
+    print(roughness - matches * monster_size)
 
 
 if __name__ == "__main__":
     with open("data/20.txt") as f:
         data = f.read()
     data = data.splitlines()
-    part1(data)
-    # part2(data)
+    # part1(data)
+    part2(data)
