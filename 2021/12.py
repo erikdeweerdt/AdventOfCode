@@ -8,6 +8,18 @@ TESTDATA = [
     'b-end',
 ]
 TESTDATA2 = [
+    'dc-end',
+    'HN-start',
+    'start-kj',
+    'dc-start',
+    'dc-HN',
+    'LN-dc',
+    'HN-end',
+    'kj-sa',
+    'kj-HN',
+    'kj-dc',
+]
+TESTDATA3 = [
     'fs-end',
     'he-DX',
     'fs-he',
@@ -42,7 +54,7 @@ class CaveSystem:
         else:
             self.__system[a] = {b}
 
-    def paths(self, start='start', path=[], visited={'start'}):
+    def paths(self, twice=False, start='start', path=[], visited={'start'}):
         # assume no loops
         # print(start,path,visited)
         if start == 'end':
@@ -50,11 +62,15 @@ class CaveSystem:
         else:
             for cave in self.__system[start]:
                 v = set(visited)
+                t = twice
                 if cave.islower():
                     if cave in v:
-                        continue
+                        # for part 2, a _single_ small cave (except start) can be visited twice
+                        if cave == 'start' or not t:
+                            continue
+                        t = False
                     v.add(cave)
-                yield from self.paths(cave, path + [start], v)
+                yield from self.paths(t, cave, path + [start], v)
 
 
 def part1():
@@ -70,12 +86,21 @@ def part1():
     count = 0
     for p in system.paths():
         count += 1
-        print(p)
+        # print(p)
     print(count)
 
 
 def part2():
-    pass
+    with open("data/12.txt") as f:
+        data = [l.strip().split('-') for l in f.readlines() if l]
+    system = CaveSystem()
+    for a, b in data:
+        system.add(a, b)
+        system.add(b, a)
+    count = 0
+    for p in system.paths(True):
+        count += 1
+    print(count)
 
 
 if __name__ == '__main__':
