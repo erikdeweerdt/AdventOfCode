@@ -26,15 +26,14 @@ TESTDATA = [
 class Grid:
     def __init__(self) -> None:
         self.__grid = set()
-        self.__size = (0, 0)
 
     def __str__(self):
-        return '\n'.join(' '.join('#' if (x, y) in self.__grid else '.' for x in range(
-            self.__size[0])) for y in range(self.__size[1]))
+        sx = max(p[0] for p in self.__grid) + 1
+        sy = max(p[1] for p in self.__grid) + 1
+        return '\n'.join(' '.join('#' if (x, y) in self.__grid else '.' for x in range(sx)) for y in range(sy))
 
     def add(self, x, y):
         self.__grid.add((x, y))
-        self.__size = (max(self.__size[0], x + 1), max(self.__size[1], y + 1))
 
     def fold(self, fold):
         # partition left-right and merge
@@ -50,12 +49,8 @@ class Grid:
                 np[axis] = 2 * value - np[axis]
                 grid.add(tuple(np))
         self.__grid = grid
-        s = list(self.__size)
-        s[axis] //= 2
-        self.__size = tuple(s)
 
     def count_dots(self):
-        # return (self.__size[0]) * (self.__size[1]) - len(self.__grid)
         return len(self.__grid)
 
 
@@ -89,5 +84,5 @@ def read():
 
 
 if __name__ == '__main__':
-    # part1()
+    part1()
     part2()
