@@ -1,3 +1,5 @@
+import math
+
 TESTDATA = [
     'NNCB',
     '',
@@ -62,7 +64,7 @@ class Element:
 
 
 def part1():
-    template, rules = read()
+    template, _, rules = read()
     # print(rules)
     # print(template)
     for _ in range(10):
@@ -79,8 +81,32 @@ def part1():
 
 def part2():
     # does the same, but with 40 iterations
-    # this uses way too much memory, so we'll need something clever...
-    pass
+    # this uses way too much memory, so we can't generate the whole template as we did in part 1
+    # -> keep track of the pair counts and define expansion rules
+    # the trick is that since we insert, we always know the new pairs regardless of their position in the string
+    _, pairs, rules = read()
+    print(pairs)
+    for _ in range(40):
+        pairs = insert(pairs, rules)
+    print(pairs)
+    elements = {}
+    for pair, count in pairs.items():
+        add(elements, pair[0], count)
+        add(elements, pair[1], count)
+    most = max(elements, key=elements.get)
+    least = min(elements, key=elements.get)
+    print(elements, most, least)
+    # all elements but head and tail are part of two pairs -> divide by 2 and round up
+    print(math.ceil(elements[most] / 2) - math.ceil(elements[least] / 2))
+
+
+def insert(pairs, rules):
+    newpairs = {}
+    for pair, count in pairs.items():
+        new = rules[pair]
+        add(newpairs, pair[0] + new, count)
+        add(newpairs, new + pair[1], count)
+    return newpairs
 
 
 def read():
@@ -90,10 +116,22 @@ def read():
     template = Element(data[0][0])
     for c in data[0][1:]:
         template.append(Element(c))
+    pairs = {}
+    for i in range(len(data[0]) - 1):
+        add(pairs, data[0][i:i+2], 1)
     rules = [l.split(' -> ') for l in data[1:]]
-    return template, dict(rules)
+    # part 1 uses template, part 2 pairs
+    # both approaches are kept for reference even though the pairs work best
+    return template, pairs, dict(rules)
+
+
+def add(d, item, count):
+    if item in d:
+        d[item] += count
+    else:
+        d[item] = count
 
 
 if __name__ == '__main__':
-    part1()
+    # part1()
     part2()
