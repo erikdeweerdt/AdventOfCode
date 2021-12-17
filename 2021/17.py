@@ -48,7 +48,7 @@ def part2():
         for vy in range(vy_min, vy_max + 1):
             if test(vx, vy, grid):
                 vs.append((vx, vy))
-    print(vs)
+    # print(vs)
     print(len(vs))
     # print('-' * 30)
     # for x,y in T:
@@ -56,35 +56,26 @@ def part2():
     #         print(x,y)
 
 
-# there may be better ways to do this, but I don't care (this is fast enough with proper bounds)
 def test(vx, vy, grid):
+    # if vy > 0, convert to the < 0 case by setting t = 2 * vy + 1 and vy = -vy - 1
+    t = 0 if vy <= 0 else 2 * vy + 1
+    vy = vy if vy <= 0 else -vy - 1
+    # first find possible t's for y (no exceptional case for reaching 0)
     times = []
-    zero = 0
-    t = 0
-    x = 0
+    y = 0
     while True:
+        y += vy
+        vy -= 1
         t += 1
-        x += vx
-        vx -= 1
-        if x >= grid[0][0] and x <= grid[1][0]:
-            times.append(t)
-        if vx == 0:
-            zero = t
+        if y < grid[1][1]:
             break
+        if y <= grid[0][1]:
+            times.append(t)
     # print(times)
     for t in times:
-        y = sum(vy - vt for vt in range(t))
-        if y <= grid[0][1] and y >= grid[1][1]:
+        x = sum(vx - tx for tx in range(min(t, vx + 1)))
+        if x >= grid[0][0] and x <= grid[1][0]:
             return True
-        if t == zero:
-            vt = vy - t
-            while True:
-                if y < grid[1][1]:
-                    break
-                if y <= grid[0][1]:
-                    return True
-                y += vt
-                vt -= 1
     return False
 
 
