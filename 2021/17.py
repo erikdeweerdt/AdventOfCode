@@ -61,21 +61,19 @@ def test(vx, vy, grid):
     t = 0 if vy <= 0 else 2 * vy + 1
     vy = vy if vy <= 0 else -vy - 1
     # first find possible t's for y (no exceptional case for reaching 0)
-    times = []
     y = 0
+    x = sum(vx - tx for tx in range(min(t, vx + 1)))
     while True:
         y += vy
+        if t < vx:
+            x += vx - t
         vy -= 1
         t += 1
         if y < grid[1][1]:
             break
         if y <= grid[0][1]:
-            times.append(t)
-    # print(times)
-    for t in times:
-        x = sum(vx - tx for tx in range(min(t, vx + 1)))
-        if x >= grid[0][0] and x <= grid[1][0]:
-            return True
+            if x >= grid[0][0] and x <= grid[1][0]:
+                return True
     return False
 
 
