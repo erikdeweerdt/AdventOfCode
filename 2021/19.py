@@ -1,112 +1,144 @@
 import re
 import numpy as np
-from itertools import combinations
+from itertools import combinations, product
+
+
+class Rotation:
+    __all = None
+
+    def __init__(self, matrix):
+        self.__matrix = matrix
+
+    def apply(self, vector):
+        return np.matmul(vector, self.__matrix)
+
+    @classmethod
+    def all(cls):
+        if cls.__all is None:
+            cls.__all = []
+            # rotations are defined by picking x and y,
+            # filtering out those combinations that are parallel (dot product == 0)
+            # and then finding z with the cross product
+            # see https://stackoverflow.com/questions/34391968/how-to-find-the-rotation-matrix-between-two-coordinate-systems
+            # the translation component can be ignored because coordinates are relative
+            vectors = [
+                (1, 0, 0),
+                (-1, 0, 0),
+                (0, 1, 0),
+                (0, -1, 0),
+                (0, 0, 1),
+                (0, 0, -1),
+            ]
+            vectors = list(map(np.array, vectors))
+            # pick x and y orientation
+            for vi in vectors:
+                for vj in vectors:
+                    # if dot product is 0 both are parallel and thus invalid
+                    if vi.dot(vj) == 0:
+                        # otherwise z is the cross product
+                        vk = np.cross(vi, vj)
+                        cls.__all.append(cls(np.array([vi, vj, vk])))
+        return cls.__all
+
+
+class Scanner:
+    def __init__(self, id) -> None:
+        self.pos = np.array([0, 0, 0]) if id == 0 else None
+        self.__beacons = None
+        self.__distances = {}
+
+    def add_beacon(self, beacon):
+        b = np.array(list(map(int, beacon.split(','))))
+        if self.__beacons is None:
+            self.__beacons = b
+        else:
+            j = len(self.__beacons) if len(self.__beacons.shape) == 2 else 1
+            self.__beacons = np.vstack((self.__beacons, b))
+            # calculate and store distances from the new beacon to the existing ones
+            for i in range(j):
+                self.__distances[self.__distance(self.__beacons[i, :], b)] = (i, j)
+
+    @property
+    def beacons(self):
+        yield from map(tuple, self.__beacons)
+
+    def match(self, other):
+        # 66 = number of combinations of 2 elements out of 12, i.e. all possible distances between pairs (excluding reverse direction)
+        # = (12 * 11) / 2
+        # if there's a match, return some matching distance
+        if len(m := set(self.__distances) & set(other.__distances)) >= 66:
+            # a set is not indexed
+            return next(iter(m))
+        return None
+
+    def align(self, other, matching_distance):
+        # attempt to align other to self, starting with the point pairs with matching distance
+        # take the first point of self and attempt for both of the second (pairs can align either way)
+        # if successful, transform other into self's coordinate system
+        sb = self.__beacons
+        for r in Rotation.all():
+            ob = r.apply(other.__beacons)
+            p = self.__distances[matching_distance][0]
+            for q in other.__distances[matching_distance]:
+                # translate point q to p and check if at least 12 points in total now line up
+                d = sb[p, :] - ob[q, :]
+                if len((b := set(map(tuple, ob + d))) & set(map(tuple, sb))) >= 12:
+                    # transform other
+                    if other.pos:
+                        other.pos += d
+                    else:
+                        other.pos = d
+                    other.__beacons = ob + d
+                    # return the set of matching beacons
+                    return b
+        return None
+
+    @staticmethod
+    def __distance(a, b):
+        # sort distances since we don't know which component is which after rotation
+        # we could also take the sum, but that increases the chance of collisions
+        return tuple(sorted(map(abs, a - b)))
 
 
 def part1():
-    beacons, _ = align_all(read())
+    scanners = read()
+    beacons = align_all(scanners)
     print(len(beacons))
 
 
 def part2():
-    _, positions = align_all(read())
-    # manhattan distance = sum of straight-line distances in all directions
-    print(max(np.abs(x-y).sum() for x, y in combinations(positions, 2)))
+    scanners = read()
+    align_all(scanners)
+    print(max(np.abs(x.pos-y.pos).sum() for x, y in combinations(scanners, 2)))
 
 
 def align_all(scanners):
-    distances = list(map(distance, scanners))
-    # reference all scanner positions by the 0th one
-    scanner_positions = {0: (0, 0, 0)}
-    # deduplicated beacons: we'll add new ones after transforming them to the 0-reference
-    beacons = set(map(tuple, scanners[0]))
-    while len(scanner_positions) < len(scanners):
-        for i, j, v in match(distances):
-            # we're aligning against already known cubes: only consider those pairs for which one is already known
-            if (i in scanner_positions) == (j in scanner_positions):
-                continue
-            # swap indexes if the second one is already known
-            elif j in scanner_positions:
-                i, j = j, i
-            pos, b, r = align(scanners[i], scanners[j], distances[i][v], distances[j][v])
-            # update the placement of the scanner in the grid
-            # this allows newly added positions in the next iterations to be 0-referenced immediately
-            scanner_positions[j] = pos
-            scanners[j] = r(scanners[j]) + pos
-            beacons.update(b)
-    return beacons, scanner_positions.values()
-
-
-def align(s1, s2, p1, p2):
-    for r in rotations():
-        s2t = r(s2)
-        # p1 and p2 are point pairs that can align either way
-        p = p1[0]
-        for q in p2:
-            d = s1[p, :] - s2t[q, :]
-            if len((b := set(map(tuple, s2t + d))) & set(map(tuple, s1))) >= 12:
-                # return
-                # * the distance (i.e. how much the j scanner is translated w.r.t to the i one)
-                # * the overlapping beacons
-                # * the rotation used
-                return d, b, r
-
-
-def match(distances):
-    for i, j in combinations(range(len(distances)), 2):
-        # 66 = number of combinations of 2 elements out of 12, i.e. all possible distances between pairs (excluding reverse direction)
-        # = (12 * 11) / 2
-        if len(m := set(distances[i]) & set(distances[j])) >= 66:
-            # return the matching indexes (i.e. scanners) and some matching distance pair (e.g. the first one)
-            yield i, j, next(iter(m))
-
-
-def distance(scanner):
-    # calculate absolute distances between beacons among every axis
-    # sort by magnitude (sum could also be used, but that may leave a bigger search space)
-    # use as key in map to facilitate set operations
-    return {
-        tuple(sorted(map(abs, scanner[i, :] - scanner[j, :]))): (i, j)
-        for i, j in combinations(range(len(scanner)), 2)
-    }
-
-
-def rotations():
-    # possible orientations
-    vectors = [
-        (1, 0, 0),
-        (-1, 0, 0),
-        (0, 1, 0),
-        (0, -1, 0),
-        (0, 0, 1),
-        (0, 0, -1),
-    ]
-    vectors = list(map(np.array, vectors))
-    # pick x and y orientation
-    for vi in vectors:
-        for vj in vectors:
-            # if dot product is 0 both are parallel and thus invalid
-            if vi.dot(vj) == 0:
-                # otherwise z is the cross product
-                vk = np.cross(vi, vj)
-                yield lambda x: np.matmul(x, np.array([vi, vj, vk]))
+    found = scanners[0:1]
+    todo = scanners[1:]
+    beacons = set(scanners[0].beacons)
+    while todo:
+        for a, b in product(found, todo):
+            if m := a.match(b):
+                beacons.update(a.align(b, m))
+                found.append(b)
+                todo.remove(b)
+                break
+    return beacons
 
 
 def read():
     scanners = []
     with open("data/19.txt") as f:
-        # data =f.read()
         for l in f.readlines():
             if l.strip():
-                if re.match(r'--- scanner \d+ ---', l):
-                    s = []
+                if m := re.match(r'--- scanner (\d+) ---', l):
+                    s = Scanner(int(m.group(1)))
                     scanners.append(s)
                 else:
-                    s.append(list(map(int, l.split(','))))
-    scanners = list(map(np.array, scanners))
+                    s.add_beacon(l.strip())
     return scanners
 
 
 if __name__ == '__main__':
-    part1()
-    part2()
+    part1()  # 436
+    part2()  # 10918
