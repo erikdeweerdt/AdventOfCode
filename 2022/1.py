@@ -1,44 +1,27 @@
-class Elf:
-    def __init__(self):
-        self.__items = []
-        self.__total = 0
-
-    def add(self, item):
-        self.__items.append(item)
-        self.__total += item
-
-    def get_total(self):
-        return self.__total
-
-
 def part1():
     mx = 0
     for elf in read():
-        if elf.get_total() > mx:
-            mx = elf.get_total()
+        if elf > mx:
+            mx = elf
     print(mx)
 
 
 def part2():
-    def key(elf): return elf.get_total()
-    elves = sorted(list(read()), key=key, reverse=True)
-    print(elves[0].get_total() + elves[1].get_total() + elves[2].get_total())
+    elves = sorted(read(), reverse=True)
+    print(elves[0] + elves[1] + elves[2])
 
 
 def read():
     with open('data/1.txt') as f:
         data = list(map(str.strip, f.readlines()))
-    elf = None
+    total = 0
     for line in data:
         if line:
-            if elf is None:
-                elf = Elf()
-            elf.add(int(line))
+            total += int(line)
         else:
-            yield elf
-            elf = None
-    if elf:
-        yield elf
+            yield total
+            total = 0
+    yield total
 
 
 if __name__ == '__main__':
