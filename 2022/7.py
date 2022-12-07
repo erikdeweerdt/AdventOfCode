@@ -39,7 +39,7 @@ class Node(ABC):
     def size(self):
         raise NotImplementedError()
 
-    def flatten(self, list):
+    def items(self):
         raise NotImplementedError()
 
 
@@ -57,10 +57,10 @@ class Dir(Node):
     def get_node(self, name):
         return self.__contents[name]
 
-    def flatten(self, list):
-        list.append(self)
+    def items(self):
+        yield self
         for node in self.__contents.values():
-            node.flatten(list)
+            yield from node.items()
 
     def __str__(self):
         return '(dir)\n' + indent('\n'.join(f'- {name} {str(node)}' for name, node in self.__contents.items()), '  ')
@@ -74,8 +74,8 @@ class File(Node):
     def size(self):
         return self.__size
 
-    def flatten(self, list):
-        list.append(self)
+    def items(self):
+        yield self
 
     def __str__(self):
         return f'(file, size={self.__size})'
@@ -83,32 +83,25 @@ class File(Node):
 
 def part1():
     root = read()
-    print('- / ' + str(root))
-    flat = []
-    root.flatten(flat)
+    # print('- / ' + str(root))
     total = 0
-    for node in flat:
-        if isinstance(node, Dir):
-            s=node.size()
-            if s <= 100000:
-                total += s
-    print (total)
-    
+    for node in root.items():
+        if isinstance(node, Dir) and (s := node.size()) < 100000:
+            total += s
+    print(total)
+
+
 def part2():
     root = read()
     space = 70000000
     required = 30000000
     available = space - root.size()
     to_free = required - available
-    flat = []
-    root.flatten(flat)
-    candidates = []
-    for node in flat:
-        if isinstance(node, Dir):
-            s = node.size()
-            if s >= to_free:
-                candidates.append(s)
-    print(sorted(candidates))
+    smallest = space
+    for node in root.items():
+        if isinstance(node, Dir) and (s := node.size()) >= to_free and s < smallest:
+            smallest = s
+    print(smallest)
 
 
 def read(data=None):
@@ -144,5 +137,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    # part1()
-    part2()
+    part1()  # 1648397
+    part2()  # 1815525
