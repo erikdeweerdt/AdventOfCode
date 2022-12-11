@@ -213,8 +213,43 @@ class CPU:
         # signal strength is defined as _during_ the cycle, i.e. before handling instructions and increasing the counter
         return (self.__cycle + 1) * self.__x
 
+    def is_lit(self, x):
+        return abs(x - self.__x) <= 1
+
     def __str__(self) -> str:
         return f'{self.__cycle:03} ({self.__x}) [{", ".join(str(instr) for instr in self.__instructions)}]'
+
+    def __repr__(self):
+        return str(self)
+
+
+class CRT:
+    def __init__(self, width = 40, height = 6) -> None:
+        self.__width = width
+        self.__height = height
+        self.__buffer = [['.' for _ in range(width)] for _ in range(height)]
+        self.__x = 0
+        self.__y = 0
+
+    def cycle(self, cpu):
+        if self.__y >= self.__height:
+            raise IndexError()
+        # caution: CRT indexes start at 0
+        if (cpu.is_lit(self.__x)):
+            self.__buffer[self.__y][self.__x] = '#'
+        self.__x += 1
+        if self.__x >= self.__width:
+            self.__x = 0
+            self.__y += 1
+
+    def size(self):
+        return self.__width * self.__height
+
+    def __str__(self) -> str:
+        return '\n'.join(''.join(row) for row in self.__buffer)
+
+    def __repr__(self):
+        return str(self)
 
 
 def part1():
@@ -227,7 +262,7 @@ def part1():
             cpu.add_instruction(next(data))
         except StopIteration:
             pass
-        if i + 1 in [20,60,100,140,180,220]:
+        if i + 1 in [20, 60, 100, 140, 180, 220]:
             signal_strengths.append(cpu.signal_strength())
         cpu.cycle()
         # print(cpu)
@@ -236,7 +271,17 @@ def part1():
 
 
 def part2():
-    pass
+    cpu = CPU()
+    crt = CRT()
+    data = iter(read())
+    for i in range(crt.size()):
+        try:
+            cpu.add_instruction(next(data))
+        except StopIteration:
+            pass
+        crt.cycle(cpu)
+        cpu.cycle()
+    print(crt)
 
 
 def read(data=None):
@@ -250,5 +295,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()
-    # part2()
+    # part1()
+    part2()
