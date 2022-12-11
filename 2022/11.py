@@ -1,4 +1,5 @@
 from io import StringIO
+import numpy as np
 
 testdata = '''
 Monkey 0:
@@ -51,6 +52,9 @@ class Test:
 
     def test(self, value):
         return value % self.__div == 0
+    
+    def get_div(self):
+        return self.__div
 
     def __str__(self) -> str:
         return f'divisible by {self.__div}'
@@ -68,12 +72,18 @@ class Monkey:
         self.__if_false = if_false
         self.__inspections = 0
 
-    def turn(self):
+    def turn(self, relief=True, lcm=None):
         if len(self.__items) == 0:
             raise StopIteration()
         self.__inspections += 1
         item = self.__operation.apply(self.__items.pop(0))
-        item //= 3
+        # this keeps numbers manageable
+        # divisibility doesn't change in modulo calculus
+        # if we perform all calculations modulo the LCM of all monkey's divider, divisibility doesn't change for any of them
+        if lcm is not None:
+            item %= lcm
+        if relief:
+            item //= 3
         return (self.__if_true, item) if self.__test.test(item) else (self.__if_false, item)
 
     def add_item(self, item):
@@ -81,6 +91,9 @@ class Monkey:
 
     def activity(self):
         return self.__inspections
+
+    def get_test(self):
+        return self.__test
 
     def __str__(self) -> str:
         return f'Monkey({self.__inspections}) [{", ".join(str(item) for item in self.__items)}]\n  if({self.__operation} is {self.__test})\n    throw to {self.__if_true}\n  else\n    throw to {self.__if_false}'
@@ -104,7 +117,18 @@ def part1():
 
 
 def part2():
-    pass
+    monkeys = list(read())
+    lcm = np.lcm.reduce([m.get_test().get_div() for m in monkeys])
+    for _ in range(10000):
+        for monkey in monkeys:
+            while True:
+                try:
+                    (index, item) = monkey.turn(False, lcm)
+                    monkeys[index].add_item(item)
+                except StopIteration:
+                    break
+    monkeys.sort(key=lambda m: m.activity(), reverse=True)
+    print(monkeys[0].activity() * monkeys[1].activity())
 
 
 def read(data=None):
@@ -125,5 +149,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()
-    # part2()
+    # part1()
+    part2()
