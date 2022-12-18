@@ -1,3 +1,4 @@
+from functools import cmp_to_key
 from io import StringIO
 from itertools import zip_longest
 from typing import Optional
@@ -31,25 +32,26 @@ testdata = '''
 '''
 
 
-def in_order(left, right) -> Optional[bool]:
+def compare(left, right) -> int:
     if isinstance(left, int):
         if isinstance(right, int):
             if left < right:
-                return True
+                return -1
             if left > right:
-                return False
-            return None
-        return in_order([left], right)
+                return 1
+            return 0
+        return compare([left], right)
     if isinstance(right, int):
-        return in_order(left, [right])
+        return compare(left, [right])
     for l, r in zip_longest(left, right):
         if l is None:
-            return True
+            return -1
         if r is None:
-            return False
-        decision = in_order(l, r)
-        if decision is not None:
+            return 1
+        decision = compare(l, r)
+        if decision != 0:
             return decision
+    return 0
 
 
 def parse(iterable):
@@ -70,13 +72,25 @@ def part1():
     for left in packets:
         right = next(packets)
         index += 1
-        if in_order(left, right):
+        if compare(left, right) < 0:
             total += index
     print(total)
 
 
 def part2():
-    pass
+    div1 = [[2]]
+    div2 = [[6]]
+    packets = [div1, div2] + list(read())
+    index = 0
+    for packet in sorted(packets, key=cmp_to_key(compare)):
+        index += 1
+        if packet == div1:
+            d1 = index
+        elif packet == div2:
+            d2 = index
+    print(div1, d1)
+    print(div2, d2)
+    print(d1*d2)
 
 
 def read(data=None):
@@ -88,5 +102,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()  # 5684
-    # part2()
+    # part1()  # 5684
+    part2()
