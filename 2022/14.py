@@ -1,5 +1,4 @@
 import math
-from copy import deepcopy
 from io import StringIO
 
 testdata = '''
@@ -9,39 +8,38 @@ testdata = '''
 
 
 class Cave:
-    def __init__(self, min_x, max_x, depth) -> None:
-        self.__min_x = min_x
-        self.__max_x = max_x
-        self.__width = max_x - min_x + 1
-        self.__height = depth
-        self.__cave = [['.' for _ in range(self.__width)] for _ in range(self.__height)]
-        self.__cave[0][500 - self.__min_x] = '+'
-        self.__path = [(500 - self.__min_x, 0)]
+    def __init__(self) -> None:
+        self.__bounds = ((500, 0), (500, 0))
+        self.__source = (500, 0)
+        self.__rock = set()
+        self.__sand = set()
+        self.__path = [(500, 0)]
         self.grains = 0
 
-    # def translate_coord(self, c):
-    #     return (c[0] - self.__min_x, c[1])
-
-    def add_path(self, path):
+    def add_rock(self, path):
         points = iter(path)
         a = next(points)
         for b in points:
             if a[0] == b[0]:
-                self.__vertical_path(a[0], a[1], b[1])
+                start = min(a[1], b[1])
+                stop = max(a[1], b[1]) + 1
+                rocks = ((a[0], y) for y in range(start, stop))
             elif a[1] == b[1]:
-                self.__horizontal_path(a[1], a[0], b[0])
+                start = min(a[0], b[0])
+                stop = max(a[0], b[0]) + 1
+                rocks = ((x, a[1]) for x in range(start, stop))
             else:
                 raise RuntimeError('Invalid path')
+            for rock in rocks:
+                self.__extend_bounds(rock)
+                self.__rock.add(rock)
             a = b
 
     def drop_sand(self):
         try:
             while t := self.__next_tile(self.__path[-1]):
-                if t[0] < 0:
-                    raise IndexError
                 self.__path.append(t)
-            x, y = self.__path.pop()
-            self.__cave[y][x] = 'o'
+            self.__sand.add(self.__path.pop())
         except IndexError:
             return False
         self.grains += 1
@@ -49,40 +47,39 @@ class Cave:
 
     def __next_tile(self, tile):
         x, y = tile
-        if self.__cave[y + 1][x] == '.':
-            return (x, y + 1)
-        if self.__cave[y + 1][x - 1] == '.':
-            return (x - 1, y + 1)
-        if self.__cave[y + 1][x + 1] == '.':
-            return (x + 1, y + 1)
+        for t in [(x, y + 1), (x - 1, y + 1), (x + 1, y + 1)]:
+            if not self.__is_in_bounds(t):
+                raise IndexError
+            if not self.__is_obstructed(t):
+                return t
         return None
 
-    def __horizontal_path(self, y, a, b):
-        if a < b:
-            start = a - self.__min_x
-            end = b - self.__min_x + 1
-        else:
-            start = b - self.__min_x
-            end = a - self.__min_x + 1
-        for x in range(start, end):
-            self.__cave[y][x] = '#'
+    def __extend_bounds(self, tile):
+        self.__bounds = ((min(self.__bounds[0][0], tile[0]), min(self.__bounds[0][1], tile[1])),
+                         (max(self.__bounds[1][0], tile[0]), max(self.__bounds[1][1], tile[1])))
 
-    def __vertical_path(self, x, a, b):
-        if a < b:
-            start = a
-            end = b
-        else:
-            start = b
-            end = a
-        x -= self.__min_x
-        for y in range(start, end):
-            self.__cave[y][x] = '#'
+    def __is_in_bounds(self, tile):
+        return tile[0] >= self.__bounds[0][0] and tile[0] <= self.__bounds[1][0] and tile[1] >= self.__bounds[0][1] and tile[1] <= self.__bounds[1][1]
+
+    def __is_obstructed(self, tile):
+        return tile in self.__rock or tile in self.__sand
 
     def __str__(self) -> str:
-        cave = deepcopy(self.__cave)
-        for x, y in self.__path[1:]:
-            cave[y][x] = '~'
-        return '\n'.join(''.join(row) for row in cave)
+        res = ''
+        for y in range(self.__bounds[0][1], self.__bounds[1][1] + 1):
+            for x in range(self.__bounds[0][0], self.__bounds[1][0] + 1):
+                if (x, y) == self.__source:
+                    res += '+'
+                elif (x, y) in self.__path:
+                    res += '~'
+                elif (x, y) in self.__rock:
+                    res += '#'
+                elif (x, y) in self.__sand:
+                    res += 'o'
+                else:
+                    res += '.'
+            res += '\n'
+        return res
 
     def __repr__(self) -> str:
         return str(self)
@@ -90,23 +87,11 @@ class Cave:
 
 def part1():
     paths = [[tuple(map(int, point.split(','))) for point in line.split(' -> ')] for line in read()]
-    min_x = math.inf
-    max_x = -math.inf
-    depth = 0
+    cave = Cave()
     for path in paths:
-        for point in path:
-            min_x = min(min_x, point[0])
-            max_x = max(max_x, point[0])
-            depth = max(depth, point[1])
-    cave = Cave(min_x, max_x, depth + 1)
-    for path in paths:
-        cave.add_path(path)
-    # print(cave)
+        cave.add_rock(path)
     while cave.drop_sand():
-        # print()
-        # print(cave)
         pass
-    # print()
     print(cave)
     print(cave.grains)
 
