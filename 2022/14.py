@@ -8,7 +8,8 @@ testdata = '''
 
 
 class Cave:
-    def __init__(self) -> None:
+    def __init__(self, infinite = False) -> None:
+        self.__infinite = infinite
         self.__bounds = ((500, 0), (500, 0))
         self.__source = (500, 0)
         self.__rock = set()
@@ -43,12 +44,12 @@ class Cave:
         except IndexError:
             return False
         self.grains += 1
-        return True
+        return self.__source not in self.__sand
 
     def __next_tile(self, tile):
         x, y = tile
         for t in [(x, y + 1), (x - 1, y + 1), (x + 1, y + 1)]:
-            if not self.__is_in_bounds(t):
+            if not self.__infinite and not self.__is_in_bounds(t):
                 raise IndexError
             if not self.__is_obstructed(t):
                 return t
@@ -62,7 +63,7 @@ class Cave:
         return tile[0] >= self.__bounds[0][0] and tile[0] <= self.__bounds[1][0] and tile[1] >= self.__bounds[0][1] and tile[1] <= self.__bounds[1][1]
 
     def __is_obstructed(self, tile):
-        return tile in self.__rock or tile in self.__sand
+        return tile[1] >= self.__bounds[1][1] + 2 or tile in self.__rock or tile in self.__sand
 
     def __str__(self) -> str:
         res = ''
@@ -97,7 +98,14 @@ def part1():
 
 
 def part2():
-    pass
+    paths = [[tuple(map(int, point.split(','))) for point in line.split(' -> ')] for line in read()]
+    cave = Cave(True)
+    for path in paths:
+        cave.add_rock(path)
+    while cave.drop_sand():
+        pass
+    print(cave)
+    print(cave.grains)
 
 
 def read(data=None):
@@ -108,5 +116,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()
-    # part2()
+    # part1()
+    part2()
