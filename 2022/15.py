@@ -1,4 +1,5 @@
 import re
+from bisect import bisect_left
 from io import StringIO
 
 testdata = '''
@@ -24,11 +25,14 @@ class Sensor:
         self.__pos = pos
         self.__closest_beacon = closest_beacon
 
-    def no_beacons(self, y, all_beacons):
+    def no_beacons(self, y):
         max_distance = manhattan(self.__pos, self.__closest_beacon)
-        for x in range(self.__pos[0] - max_distance, self.__pos[0] + max_distance + 1):
-            if manhattan((x, y), self.__pos) <= max_distance and (x, y) not in all_beacons:
-                yield (x, y)
+        y_distance = manhattan(self.__pos, (self.__pos[0], y))
+        d = max_distance - y_distance
+        if d < 0:
+            return None
+        # ignore the presence of any beacons
+        return (self.__pos[0] - d, self.__pos[0] + d)
 
     def __eq__(self, obj):
         return isinstance(obj, Sensor) and obj.__pos == self.__pos
@@ -63,13 +67,14 @@ class Cave:
             raise ValueError(f'Invalid data: {data}')
 
     def count_row(self, row):
-        empty = set()
+        ranges = []
         for sensor in self.__sensors:
-            for b in sensor.no_beacons(row, self.__beacons):
-                empty.add(b)
+            if r := sensor.no_beacons(row):
+                ranges = insert_range(ranges, r)
         # print(empty)
         # print(''.join('#' if (i,row) in empty else '.' for i in range(-5,27)))
-        return len(empty)
+        beacons_in_range = sum(range_contains_count(r, (b[0] for b in self.__beacons if b[1] == row)) for r in ranges)
+        return sum(r[1] - r[0] + 1 for r in ranges) - beacons_in_range
 
     def __str__(self) -> str:
         return '\n'.join(str(sensor) for sensor in self.__sensors)
@@ -80,6 +85,36 @@ class Cave:
 
 def manhattan(a, b):
     return abs(a[0]-b[0])+abs(a[1]-b[1])
+
+
+def insert_range(ranges, ran):
+    # bisect in Python 3.8 can't use a key (for a bogus reason, which is why they added it in 3.10)
+    index = bisect_left([r[0] for r in ranges], ran[0])
+    # print(ranges,ran)
+    new_ranges = ranges[:index]
+    if index > 0 and ran[0] <= new_ranges[index-1][1]:
+        if ran[1] > new_ranges[index-1][1]:
+            ran = (new_ranges[index-1][0], ran[1])
+            new_ranges[index-1] = ran
+    else:
+        new_ranges.append(ran)
+    for r in ranges[index:]:
+        if ran[1] >= r[1]:
+            continue
+        elif ran[1] >= r[0]:
+            new_ranges[-1] = (ran[0], r[1])
+        else:
+            new_ranges.append(r)
+    # print(new_ranges)
+    # print()
+    return new_ranges
+
+def range_contains_count(range, points):
+    count = 0
+    for p in points:
+        if p >= range[0] and p <= range[1]:
+            count += 1
+    return count
 
 
 def part1():
@@ -103,5 +138,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1() # 5112034
+    part1()  # 5112034
     # part2()
