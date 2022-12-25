@@ -34,6 +34,16 @@ class Sensor:
         # ignore the presence of any beacons
         return (self.__pos[0] - d, self.__pos[0] + d)
 
+    def no_beacons_all(self, limit):
+        max_distance = manhattan(self.__pos, self.__closest_beacon)
+        x, y = self.__pos
+        for dy in range(max_distance + 1):
+            dx = max_distance - dy
+            if y-dy >= 0:
+                yield (y-dy, (max(0, x-dx), min(limit, x+dx)))
+            if y+dy <= limit:
+                yield (y+dy, (max(0, x-dx), min(limit, x+dx)))
+
     def __eq__(self, obj):
         return isinstance(obj, Sensor) and obj.__pos == self.__pos
 
@@ -74,7 +84,16 @@ class Cave:
         # print(empty)
         # print(''.join('#' if (i,row) in empty else '.' for i in range(-5,27)))
         beacons_in_range = sum(range_contains_count(r, (b[0] for b in self.__beacons if b[1] == row)) for r in ranges)
-        return sum(r[1] - r[0] + 1 for r in ranges) - beacons_in_range
+        return sum(map(range_length, ranges)) - beacons_in_range
+
+    def find_beacon(self, limit):
+        ranges = {}
+        for sensor in self.__sensors:
+            for y, r in sensor.no_beacons_all(limit):
+                ranges[y] = insert_range(ranges.get(y, []), r)
+        for y, r in ranges.items():
+            if len(r) == 2:
+                return (r[0][1] + 1, y)
 
     def __str__(self) -> str:
         return '\n'.join(str(sensor) for sensor in self.__sensors)
@@ -107,7 +126,24 @@ def insert_range(ranges, ran):
             new_ranges.append(r)
     # print(new_ranges)
     # print()
+    return collapse_ranges(new_ranges)
+
+
+def collapse_ranges(ranges):
+    if len(ranges) < 2:
+        return ranges
+    new_ranges = ranges[:1]
+    for r in ranges[1:]:
+        if r[0] == new_ranges[-1][1] + 1:
+            new_ranges[-1] = (new_ranges[-1][0], r[1])
+        else:
+            new_ranges.append(r)
     return new_ranges
+
+
+def range_length(r):
+    return r[1] - r[0] + 1
+
 
 def range_contains_count(range, points):
     count = 0
@@ -127,7 +163,14 @@ def part1():
 
 
 def part2():
-    pass
+    cave = Cave()
+    for line in read():
+        cave.add_data(line)
+    print(cave)
+    print()
+    b = cave.find_beacon(4000000)
+    print(b)
+    print(4000000 * b[0] + b[1])
 
 
 def read(data=None):
@@ -138,5 +181,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()  # 5112034
-    # part2()
+    # part1()  # 5112034
+    part2() # 13172087230812
