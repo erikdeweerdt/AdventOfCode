@@ -1,4 +1,5 @@
 from io import StringIO
+from os import path
 
 testdata = '''
 '''
@@ -13,7 +14,7 @@ def part2():
 
 
 def read(data=None):
-    with StringIO(data) if data else open(f'data/{__file__.replace(".py", ".txt")}') as f:
+    with StringIO(data) if data else open(f'data/{path.basename(__file__).replace(".py", ".txt")}') as f:
         while line := f.readline():
             if line := line.strip():
                 yield line
