@@ -24,7 +24,18 @@ def part1():
 
 
 def part2():
-    pass
+    s = 0
+    copies = []
+    for line in read():
+        _, winning, yours = re.split(r':\s+|\s+\|\s+', line)
+        winning = set(int(w) for w in re.split(r'\s+', winning))
+        yours = set(int(y) for y in re.split(r'\s+', yours))
+        l = len(winning.intersection(yours))
+        c = copies.pop(0) if len(copies) else 1
+        s += c
+        if l:
+            copies = [copies[i] + c if i < len(copies) else 1 + c for i in range(l)] + copies[l:]
+    print(s)
 
 
 def read(data=None):
@@ -35,5 +46,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()
-    # part2()
+    # part1()
+    part2()
