@@ -41,19 +41,7 @@ humidity-to-location map:
 
 
 def part1():
-    seeds = []
-    maps = {}
-    curr = None
-    for line in read():
-        if line.startswith('seeds: '):
-            seeds = [int(s) for s in line[7:].split(' ')]
-            continue
-        m = re.match(r'(\S+) map:', line)
-        if m:
-            curr = []
-            maps[m.group(1)] = curr
-        else:
-            curr.append(tuple(int(v) for v in line.split(' ')))
+    seeds, maps = parse()
     # print(seeds)
     # print(maps)
     min_value = inf
@@ -69,13 +57,70 @@ def part1():
     print(min_value)
 
 def part2():
-    pass
+    seeds, maps = parse()
+    ranges = [(seeds[i], seeds[i+1]) for i in range(0, len(seeds), 2)]
+    for name, map in maps.items():
+        new_ranges = []
+        for r in ranges:
+            new_ranges += map_range(r, map)
+        ranges = new_ranges
+        # print(name)
+        # print(ranges)
+    print(min(r[0] for r in ranges))
+    # print(map_range(ranges[1], maps['seed-to-soil']))
 
 def map_value(v, map):
     for d,s,l in map:
         if v >= s and v < s + l:
             return d + v - s
     return v
+
+# nasty code is nasty
+# works by mapping pieces of the source range and filling the holes afterwards
+# makes part 2 run in 20ms
+def map_range(r, map):
+    rs,rl = r
+    ranges = []
+    for d,s,l in map:
+        a = max(rs, s)
+        b = min(rs + rl, s + l)
+        if a < b:
+            ranges.append((a, b - a, d - s))
+    ranges.sort(key=lambda r: r[0])
+    if len(ranges) == 0:
+        return [r]
+    # plug holes
+    plugged = [ranges[0]]
+    for i in range(1, len(ranges)):
+        ps,pl,_ = plugged[-1]
+        s,_,_ = ranges[i]
+        if ps + pl < s:
+            plugged.append((ps + pl, s - (ps + pl), 0))
+        plugged.append(ranges[i])
+    # front and back
+    if plugged[0][0] > rs:
+        plugged.insert(0, (rs, plugged[0][0] - rs, 0))
+    end = plugged[-1][0] + plugged[-1][1]
+    if end < rs + rl:
+        plugged.append((end, rs + rl - end, 0))
+    return [(p[2] + p[0], p[1]) for p in plugged]
+
+
+def parse(data=None):
+    seeds = []
+    maps = {}
+    curr = None
+    for line in read(data):
+        if line.startswith('seeds: '):
+            seeds = [int(s) for s in line[7:].split(' ')]
+            continue
+        m = re.match(r'(\S+) map:', line)
+        if m:
+            curr = []
+            maps[m.group(1)] = curr
+        else:
+            curr.append(tuple(int(v) for v in line.split(' ')))
+    return seeds, maps
 
 
 def read(data=None):
@@ -86,5 +131,5 @@ def read(data=None):
 
 
 if __name__ == '__main__':
-    part1()
-    # part2()
+    # part1()
+    part2()
