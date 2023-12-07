@@ -1,0 +1,11 @@
+Time:        35     69     68     87
+Distance:   213   1168   1086   1248
+
+x(35-x) - 213  = 0 -> 8,27
+x(69-x) - 1168 = 0 -> 30,39
+x(68-x) - 1086 = 0 -> 26,42
+x(87-x) - 1248 = 0 -> 19,68
+
+x(35696887-x) - 213116810861248 = 0 -> 7579553,28117334
+
+solved analytically: combinations in which race is won = difference between solutions
